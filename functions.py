@@ -182,8 +182,9 @@ def initalizeEncoder(iters, L_iter, Encoder, Decoder, data, data_in, z_dim, cova
         q_z = q_z_x_compute(eps, torch.diagonal(L, dim1=1, dim2=2))
         DKL = p_z - q_z 
         elbo = p_x_z + 0.001 * DKL   
-        elbo.backward()
-        optimizer.step()
+        if not torch.isnan(elbo):
+            elbo.backward()
+            optimizer.step()
         # Reset gradient
         optimizer.zero_grad()
         if iter % L_iter == 0:
