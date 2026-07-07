@@ -156,7 +156,7 @@ if args.n_noise_cov > 0:
 
     covariates = torch.cat([covariates, noise_raw], dim=1)
     noise_in = noise_raw.clone()
-    noise_in = (noise_in - noise_in.mean(dim=0)) / noise_in.std(dim=0)
+    noise_in = (noise_in - noise_in.mean(dim=0)) / (noise_in.std(dim=0) + 1e-8)
     covariates_in = torch.cat([covariates_in, noise_in], dim=1)
 
 #########################################################
