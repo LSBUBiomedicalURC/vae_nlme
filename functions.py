@@ -137,7 +137,20 @@ def LogLikelihood_sample(M, z_pop_hat, omega_pop, res, data, mu, L, C, h, time, 
     outer = diff.unsqueeze(-1) @ diff.unsqueeze(-2)  
     weights_ = weights.unsqueeze(-1).unsqueeze(-1)  
     cov_true = torch.sum(weights_ * outer, dim=0)
-    L_true = torch.linalg.cholesky(cov_true)
+    # Cholesky can fail when cov_true is near-singular (few effective samples,
+    # degenerate posterior under many covariates). Try increasing diagonal jitter
+    # before giving up and returning nan so the caller can report rather than crash.
+    L_true = None
+    for jitter in [0.0, 1e-6, 1e-4, 1e-2, 1e-1]:
+        try:
+            L_true = torch.linalg.cholesky(cov_true + jitter * torch.eye(z_dim))
+            break
+        except torch.linalg.LinAlgError:
+            continue
+    if L_true is None:
+        print("WARNING: LogLikelihood_sample Cholesky failed even with jitter=0.1 -- returning nan")
+        nan = torch.tensor(float('nan'))
+        return nan, nan.expand(nbatch)
     #########################################################
     # Compute Likelihood
     #########################################################
