@@ -126,7 +126,7 @@ if args.n_noise_cov > 0:
             raise FileNotFoundError(
                 f"--noise_source tgca requires {tgca_path}. "
                 "Place TGCA_genes.csv (subjects × genes, one header row) in the Data directory.")
-        data_rnaseq = np.loadtxt(tgca_path, delimiter=",", skiprows=1)
+        data_rnaseq = np.loadtxt(tgca_path, delimiter=",", skiprows=0)
         if data_rnaseq.ndim == 1:
             data_rnaseq = data_rnaseq[:, None]
         n_rows, n_cols = data_rnaseq.shape
@@ -139,6 +139,11 @@ if args.n_noise_cov > 0:
                 f"TGCA_genes.csv has only {n_cols} gene columns but --n_noise_cov={args.n_noise_cov} "
                 "was requested.")
         raw = data_rnaseq[:nbatch_tmp, :args.n_noise_cov].astype(np.float32)
+        nan_cols = np.where(~np.isfinite(raw).all(axis=0))[0]
+        if len(nan_cols) > 0:
+            raise ValueError(
+                f"TGCA_genes.csv columns {nan_cols.tolist()} contain NaN or inf values "
+                f"in the first {nbatch_tmp} rows. Remove or impute these columns.")
         # z-score each gene column, then exponentiate so values are positive and
         # compatible with initalize_C's log(cov/weight_pop) log-linear design.
         # exp(z-score) is centred at 1.0 (exp(0)=1) and always > 0, exactly as
