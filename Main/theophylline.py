@@ -241,6 +241,14 @@ pop =  pop_parameter(z_dim, nbatch, gamma_iter, data, C, C_regression, C[:,:z_di
 # Burn in
 #########################################################
 Encoder, optimizer, pred_x, mu, L, a, b, z_pop_iter_bi, omega_pop_iter_bi, a_iter_bi, elbo_iter_bi = initalizeEncoder(iters_burn_in, L_iter, Encoder, Decoder, data, data_in, z_dim, covariates_in, lengths, h, pop)
+if not (torch.isfinite(mu).all() and torch.isfinite(L).all()):
+    nan_in = (~torch.isfinite(covariates_in)).any().item()
+    raise RuntimeError(
+        f"Burn-in produced non-finite mu or L. "
+        f"covariates_in has non-finite values: {nan_in}. "
+        f"mu finite: {torch.isfinite(mu).all().item()}, "
+        f"L finite: {torch.isfinite(L).all().item()}. "
+        f"covariates_in range: [{covariates_in.min().item():.3g}, {covariates_in.max().item():.3g}]")
 pred_x_mean = pred_x.detach()
 #########################################################
 # Setup Optimizer

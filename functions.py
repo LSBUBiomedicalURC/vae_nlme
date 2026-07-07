@@ -184,6 +184,7 @@ def initalizeEncoder(iters, L_iter, Encoder, Decoder, data, data_in, z_dim, cova
         elbo = p_x_z + 0.001 * DKL   
         if torch.isfinite(elbo):
             elbo.backward()
+            torch.nn.utils.clip_grad_norm_(Encoder.parameters(), max_norm=1.0)
             optimizer.step()
         # Reset gradient
         optimizer.zero_grad()
