@@ -126,7 +126,7 @@ if args.n_noise_cov > 0:
             raise FileNotFoundError(
                 f"--noise_source tgca requires {tgca_path}. "
                 "Place TGCA_genes.csv (subjects × genes, one header row) in the Data directory.")
-        data_rnaseq = np.loadtxt(tgca_path, delimiter=",", skiprows=0)
+        data_rnaseq = np.loadtxt(tgca_path, delimiter=",", skiprows=1)
         if data_rnaseq.ndim == 1:
             data_rnaseq = data_rnaseq[:, None]
         n_rows, n_cols = data_rnaseq.shape
