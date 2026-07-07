@@ -259,14 +259,14 @@ Elbo_iter      = torch.zeros(iters)
 print('')
 print('#############################################')
 print('Training VAE')
-z_pop_cached = None  # last full-length z_pop from a MIQP call; reused on non-MIQP iterations
+z_pop_cached = torch.zeros(z_dim + z_dim * n_cov)  # valid zero prior; MIQP will update on schedule
 for iter in range(1,iters + 1):
     #########################################################
     # Update population parameters
     #########################################################
     if iter > 1:
         pred_x_mean = data_matrix[L_iter-2:L_iter].mean(dim = 0)
-    do_miqp = (iter == 1) or (iter % args.miqp_every == 0)
+    do_miqp = (iter % args.miqp_every == 0)
     if iter > gamma_iter:
         z_pop_ret, omega_pop, a, _ = pop.update_pop(mu.detach(), L.detach(), pred_x_mean, iter, covariate_selection=do_miqp, smoothing=True, update_pop=True)
     else:
