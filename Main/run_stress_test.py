@@ -55,12 +55,16 @@ SCRIPTS = {
     'tacrolimus': 'tacrolimus.py',
     'paclitaxel': 'paclitaxel.py',
     'theophylline': 'theophylline.py',
+    'quinidine': 'quinidine.py',
+    'warfarin': 'warfarin.py',
 }
 
 DEFAULT_SWEEPS = {
     'tacrolimus': [4, 8, 15, 30, 50, 80],
     'paclitaxel': [4, 8, 12, 20, 30],
     'theophylline': [0, 5, 10, 20, 30],  # n_noise_cov (added ON TOP of the 2 real covariates)
+    'quinidine': [10, 15, 20, 30, 50, 80],  # total n_cov (10 real + noise)
+    'warfarin': [3, 8, 13, 23, 33],  # total n_cov (3 real + 0/5/10/20/30 noise)
 }
 
 
@@ -305,6 +309,12 @@ def main():
     parser.add_argument('--theo_n_noise_cov', type=int, nargs='+', default=None,
                         help=f"Override the Theophylline n_noise_cov sweep (default: "
                             f"{DEFAULT_SWEEPS['theophylline']}).")
+    parser.add_argument('--quini_n_cov', type=int, nargs='+', default=None,
+                        help=f"Override the Quinidine n_cov sweep (default: "
+                            f"{DEFAULT_SWEEPS['quinidine']}).")
+    parser.add_argument('--warf_n_cov', type=int, nargs='+', default=None,
+                        help=f"Override the Warfarin n_cov sweep (default: "
+                            f"{DEFAULT_SWEEPS['warfarin']}).")
     parser.add_argument('--theo_noise_source', choices=['iid', 'correlated', 'tgca'], default=None,
                         help="Noise source for Theophylline's injected covariates (default: None, "
                              "meaning use theophylline.py's own default 'iid'). Set to 'tgca' to "
@@ -358,6 +368,8 @@ def main():
         'tacrolimus': args.tacro_n_cov or DEFAULT_SWEEPS['tacrolimus'],
         'paclitaxel': args.pacli_n_cov or DEFAULT_SWEEPS['paclitaxel'],
         'theophylline': args.theo_n_noise_cov or DEFAULT_SWEEPS['theophylline'],
+        'quinidine': args.quini_n_cov or DEFAULT_SWEEPS['quinidine'],
+        'warfarin': args.warf_n_cov or DEFAULT_SWEEPS['warfarin'],
     }
     seeds = list(range(1, args.n_seeds + 1))
 
@@ -412,3 +424,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
