@@ -45,6 +45,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 
 import pandas as pd
 
@@ -99,6 +100,7 @@ def save_summary_table(rows, save_path):
         n_obs         = r.get('n_observations', None)
         ofv           = r.get('ofv_lin',  None)
         n_selected    = r.get('n_selected', None)
+        time_elapsed   = r.get('time_elapsed', None)
 
         # ---- split selected into true vs noise ----
         n_true   = n_true_cov if n_true_cov is not None else None
@@ -130,6 +132,7 @@ def save_summary_table(rows, save_path):
             AIC=round(aic, 2) if not math.isnan(aic) else None,
             BIC=round(bic, 2) if not math.isnan(bic) else None,
             BICc=round(bicc, 2) if not math.isnan(bicc) else None,
+            time_elapsed=round(time_elapsed, 2) if time_elapsed is not None else None
         ))
 
     df = pd.DataFrame(summary_rows)
@@ -178,8 +181,11 @@ def run_one(dataset, n_batch, sweep_value, iters, iters_burn_in, solver,
 
     row = dict(dataset=dataset, n_batch=n_batch, sweep_value=sweep_value, solver=solver, seed=seed)
     try:
+        start_exp = time.perf_counter()
         proc = subprocess.run(args, cwd=ROOT, env=env, capture_output=True, text=True,
                               timeout=timeout)
+        end_exp = time.perf_counter()
+
     except subprocess.TimeoutExpired:
         row.update(status='timeout', error=f'exceeded --timeout={timeout}s')
         return row
@@ -198,6 +204,7 @@ def run_one(dataset, n_batch, sweep_value, iters, iters_burn_in, solver,
         result = json.load(f)
     os.remove(results_path)
     row.update(result, status='ok')
+    row.update(result, time_elapsed=end_exp - start_exp)
     return row
 
 
@@ -232,8 +239,10 @@ def save_aggregated_table(rows, save_path):
         n_true_cov  = ref.get('n_true_cov')
         n_cov_total = ref.get('n_cov', sweep_value)
         cov_names   = ref.get('covariate_names', [f'cov{i}' for i in range(n_cov_total or 0)])
-
+        
+        
         # Per-seed selection vectors (list of bool per covariate)
+        time_elapsed = [r.get('time_elapsed', _np.nan) for r in grp]
         sel_matrix = [r.get('selected', []) for r in grp]
 
         # Pad/truncate so all rows have the same length
@@ -273,7 +282,9 @@ def save_aggregated_table(rows, save_path):
             n_noise_sel_std=round(float(_np.nanstd(n_noise_sel)), 3),
             BICc_mean=round(float(_np.nanmean(biccs)), 2) if not _np.all(_np.isnan(biccs)) else None,
             BICc_std=round(float(_np.nanstd(biccs)), 2) if not _np.all(_np.isnan(biccs)) else None,
-        )
+            time_mean=round(float(_np.nanmean(time_elapsed)), 2) if not _np.all(_np.isnan(time_elapsed)) else None,
+            time_std=round(float(_np.nanstd(time_elapsed)), 2) if not _np.all(_np.isnan(time_elapsed)) else None,
+           )
         # Per-covariate selection frequency columns
         for i, freq in enumerate(sel_freq):
             name = cov_names[i] if i < len(cov_names) else f'cov{i}'
@@ -388,12 +399,14 @@ def main():
                     continue
                 print(f"[run_stress_test] {dataset}: n_batch={n_batch} sweep_value={sweep_value} "
                      f"seed={seed}/{args.n_seeds} miqp_every={miqp_every} solver={args.solver} ...", flush=True)
+                
                 row = run_one(dataset, n_batch, sweep_value, args.iters, args.iters_burn_in,
                              args.solver, args.allow_incompatible_solver, args.timeout,
                              seed=seed, plot_dir=args.plot_dir,
                              standardise_C=args.standardise_C,
                              miqp_every=miqp_every, skip_ll=args.skip_ll,
                              theo_noise_source=args.theo_noise_source)
+
                 print(f"  -> status={row['status']}"
                      + (f" n_selected={row.get('n_selected')}/{row.get('M')}" if row['status'] == 'ok' else
                         f" error={row.get('error', '')[:300]}"), flush=True)
